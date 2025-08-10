@@ -1,0 +1,103 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Titans PGN Converter</title>
+    <!-- Tailwind CSS for a clean, responsive design -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-2xl">
+        <h1 class="text-3xl font-bold mb-6 text-center text-gray-800">Chess Titans to PGN</h1>
+        <p class="text-gray-600 text-center mb-6">Upload your `.chesstitanssave-ms` file to convert it to PGN format.</p>
+
+        <form id="uploadForm" class="flex flex-col items-center space-y-4">
+            <label for="file-upload" class="flex items-center px-4 py-2 bg-blue-500 text-white rounded-md cursor-pointer hover:bg-blue-600 transition-colors duration-200">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+                Choose File
+            </label>
+            <input id="file-upload" type="file" name="file" class="hidden">
+            <span id="file-name" class="text-gray-500">No file chosen</span>
+
+            <button type="submit" class="w-full px-4 py-2 bg-green-500 text-white font-semibold rounded-md hover:bg-green-600 transition-colors duration-200">Convert to PGN</button>
+        </form>
+
+        <div id="statusMessage" class="text-center mt-4 text-sm text-red-500 hidden"></div>
+        <div id="loadingIndicator" class="text-center mt-4 hidden">
+            <div class="animate-spin inline-block w-8 h-8 border-4 border-blue-500 border-dashed rounded-full"></div>
+            <p class="text-gray-500 mt-2">Converting...</p>
+        </div>
+
+        <div id="pgnContainer" class="mt-8 hidden">
+            <h2 class="text-xl font-bold mb-2 text-gray-800">Resulting PGN:</h2>
+            <pre id="pgnText" class="bg-gray-800 text-gray-200 p-4 rounded-md overflow-x-auto text-sm"></pre>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('file-upload').addEventListener('change', function(event) {
+            const fileName = event.target.files[0] ? event.target.files[0].name : 'No file chosen';
+            document.getElementById('file-name').textContent = fileName;
+        });
+
+        document.getElementById('uploadForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const form = event.target;
+            const fileInput = form.querySelector('input[type="file"]');
+            const file = fileInput.files[0];
+
+            const statusMessage = document.getElementById('statusMessage');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const pgnContainer = document.getElementById('pgnContainer');
+            const pgnText = document.getElementById('pgnText');
+
+            statusMessage.textContent = '';
+            statusMessage.classList.add('hidden');
+            pgnContainer.classList.add('hidden');
+
+            if (!file) {
+                statusMessage.textContent = 'Please select a file to upload.';
+                statusMessage.classList.remove('hidden');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            loadingIndicator.classList.remove('hidden');
+
+            try {
+                // The URL is relative to the root of your application, which is where the API is hosted.
+                const response = await fetch('/api/PgnConverter/convert', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const result = await response.text();
+                    pgnText.textContent = result;
+                    pgnContainer.classList.remove('hidden');
+                } else {
+                    const error = await response.text();
+                    statusMessage.textContent = `Error: ${error}`;
+                    statusMessage.classList.remove('hidden');
+                }
+            } catch (error) {
+                statusMessage.textContent = `An unexpected error occurred: ${error.message}`;
+                statusMessage.classList.remove('hidden');
+            } finally {
+                loadingIndicator.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

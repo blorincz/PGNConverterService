@@ -1,0 +1,32 @@
+﻿/* Original Theme (Default) */
+.original-light {
+    background-color: #f0d9b5;
+    color: #b58863;
+}
+
+.original-dark {
+    background-color: #b58863;
+    color: #f0d9b5;
+}
+
+/* Green Theme */
+.green-light {
+    background-color: #e3d2a4;
+    color: #4f6355;
+}
+
+.green-dark {
+    background-color: #799462;
+    color: #e3d2a4;
+}
+
+/* Blue Theme */
+.blue-light {
+    background-color: #aecff3;
+    color: #3b5a83;
+}
+
+.blue-dark {
+    background-color: #6a88b5;
+    color: #aecff3;
+}

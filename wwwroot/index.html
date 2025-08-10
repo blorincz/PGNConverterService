@@ -1,0 +1,458 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Titans Saved Game Converter</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">
+    <!-- Chessboard.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .original-light {
+            background-color: #f0d9b5 !important;
+        }
+
+        .original-dark {
+            background-color: #b58863 !important;
+        }
+
+        .green-light {
+            background-color: #F0F6F5 !important;
+        }
+
+        .green-dark {
+            background-color: #63857F !important;
+        }
+
+        .blue-light {
+            background-color: #E2EBF5 !important;
+        }
+
+        .blue-dark {
+            background-color: #6489B1 !important;
+        }
+
+        /* Custom styling for the PGN output area to handle whitespace and wrapping */
+        .pgn-output-style {
+            white-space: pre-wrap; /* Preserve whitespace and wrap text */
+            word-wrap: break-word; /* Break long words */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white rounded-xl shadow-lg p-8 w-full max-w-7xl">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Chess Titans Saved Game Converter</h1>
+
+        <form id="uploadForm" class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
+            <label for="fileInput" class="text-lg font-medium text-gray-700">Select Chess Titans save file:</label>
+            <input type="file" id="fileInput" name="UploadedFile" class="form-control-file border border-gray-300 rounded-md p-2" />
+        </form>
+
+        <!-- Status Message and Loading Indicator -->
+        <div id="statusMessage" class="text-center text-red-500 font-medium mb-4 hidden"></div>
+        <div id="loadingIndicator" class="hidden text-center text-blue-500 font-medium mb-4">
+            <div class="flex items-center justify-center gap-2">
+                <div class="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent"></div>
+                <span>Processing file...</span>
+            </div>
+        </div>
+
+        <!-- Main Content Section: Chessboard and PGN/Controls -->
+        <div id="mainContent" class="hidden flex flex-col md:flex-row gap-8 items-center md:items-start justify-center">
+            <!-- Chessboard and Controls Section -->
+            <div class="flex-shrink-0">
+                <div id="board" class="w-[400px] h-[400px] sm:w-[500px] sm:h-[500px] lg:w-[480px] lg:h-[480px] rounded-lg overflow-hidden shadow-lg"></div>
+                <div class="flex flex-wrap justify-center gap-2 mt-4">
+                    <button id="startBtn" class="btn btn-secondary px-4 py-2 bg-gray-200 text-gray-700 rounded-lg shadow hover:bg-gray-300 transition-colors duration-200">⏪ Start</button>
+                    <button id="prevBtn" class="btn btn-secondary px-4 py-2 bg-gray-200 text-gray-700 rounded-lg shadow hover:bg-gray-300 transition-colors duration-200">◀️ Previous</button>
+                    <button id="nextBtn" class="btn btn-secondary px-4 py-2 bg-gray-200 text-gray-700 rounded-lg shadow hover:bg-gray-300 transition-colors duration-200">▶️ Next</button>
+                    <button id="endBtn" class="btn btn-secondary px-4 py-2 bg-gray-200 text-gray-700 rounded-lg shadow hover:bg-gray-300 transition-colors duration-200">⏩ End</button>
+                </div>
+                <div class="mt-4 text-center">
+                    <label for="boardThemeSelect" class="font-medium text-gray-700">Board Theme:</label>
+                    <select id="boardThemeSelect" class="form-control rounded-lg p-2 border border-gray-300 ml-2">
+                        <option value="original">Original</option>
+                        <option value="green">Light Cream / Dark Green</option>
+                        <option value="blue">Light Blue / Dark Blue</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- PGN Output, Analysis, and Download Section -->
+            <div class="flex-grow w-full max-w-xl md:max-w-none">
+                <!-- PGN and Download Section -->
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="text-xl font-semibold text-gray-800">PGN Output</h2>
+                        <div class="flex gap-2">
+                            <button id="reloadBtn" class="btn btn-warning px-4 py-2 bg-yellow-400 text-gray-800 rounded-lg shadow hover:bg-yellow-500 transition-colors duration-200">🔄 Reload PGN</button>
+                            <button id="downloadBtn" class="btn btn-success px-4 py-2 bg-green-500 text-white rounded-lg shadow hover:bg-green-600 transition-colors duration-200">Download PGN File</button>
+                        </div>
+                    </div>
+                    <div id="pgnOutput" class="pgn-output-style bg-gray-50 border border-gray-200 rounded-lg p-4 text-gray-800 text-sm leading-relaxed overflow-y-auto max-h-96" contenteditable="true"></div>
+                </div>
+
+                <!-- Analysis Section -->
+                <div class="mt-8">
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="text-xl font-semibold text-gray-800">Position Analysis</h2>
+                        <!-- Replaced the button with a loading indicator for the engine -->
+                        <div id="engineStatus" class="font-medium italic text-gray-500">
+                            Loading Engine...
+                        </div>
+                    </div>
+                    <div id="analysisResult" class="bg-gray-50 border border-gray-200 rounded-lg p-4 h-40 overflow-y-auto text-gray-800 text-sm">
+                        <p class="text-gray-500 italic">Analysis will appear here after the engine is ready.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chessboard.js and Chess.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.js"></script>
+
+    <!-- Stockfish.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js"></script>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const statusMessageDiv = document.getElementById('statusMessage');
+        const mainContent = document.getElementById('mainContent');
+        const pgnOutputDiv = document.getElementById('pgnOutput');
+        const boardContainer = document.getElementById('board');
+        const boardThemeSelect = document.getElementById('boardThemeSelect');
+        const analysisResultDiv = document.getElementById('analysisResult');
+        const engineStatusDiv = document.getElementById('engineStatus');
+
+        let board;
+        let game;
+        let history;
+        let currentMoveIndex = -1;
+        let pgnMoves;
+
+        let engine; // Global variable for the Stockfish.js engine
+
+        // Function to initialize the Stockfish engine
+        async function initEngine() {
+            // Check if the browser supports Web Workers
+            if (typeof Worker !== "undefined") {
+                try {
+                    // Using a different, reliable CDN URL for the Stockfish.js file
+                    const stockfishCDNUrl = 'https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js';
+
+                    // Fetch the script content and create a Blob URL to avoid cross-origin issues
+                    const response = await fetch(stockfishCDNUrl);
+                    if (!response.ok) {
+                        throw new Error(`Failed to fetch script: ${response.statusText}`);
+                    }
+                    const scriptText = await response.text();
+                    const blob = new Blob([scriptText], { type: 'application/javascript' });
+                    const workerUrl = URL.createObjectURL(blob);
+
+                    // Correctly initialize the engine as a Web Worker
+                    engine = new Worker(workerUrl);
+                    engine.onmessage = handleEngineMessage;
+
+                    // Send initialization commands to the engine
+                    engine.postMessage('uci');
+                    engine.postMessage('isready');
+
+                    engineStatusDiv.textContent = 'Engine initializing...';
+                } catch (error) {
+                    console.error('Failed to load Stockfish worker:', error);
+                    engineStatusDiv.textContent = 'Failed to load analysis engine.';
+                    engineStatusDiv.classList.remove('text-gray-500');
+                    engineStatusDiv.classList.add('text-red-500');
+                }
+            } else {
+                engineStatusDiv.textContent = 'Web Workers not supported. Analysis unavailable.';
+                engineStatusDiv.classList.remove('text-gray-500');
+                engineStatusDiv.classList.add('text-red-500');
+            }
+        }
+
+        // Function to handle messages from the Stockfish engine
+        function handleEngineMessage(event) {
+            const message = event.data;
+            // The engine is ready to receive commands when it sends 'readyok'
+            if (message === 'readyok') {
+                engineStatusDiv.textContent = 'Engine ready!';
+                engineStatusDiv.classList.remove('text-gray-500');
+                engineStatusDiv.classList.add('text-green-600');
+                // Re-run analysis for the current position if a game is loaded
+                if (game) {
+                    analyzePosition();
+                }
+                return;
+            }
+
+            // We only care about the best move and evaluation from the search
+            if (message.startsWith('info')) {
+                const bestMove = message.match(/ pv (\S+)/)?.[1];
+                let score = message.match(/ score (cp|mate) (-?\d+)/);
+
+                if (bestMove && score) {
+                    let evalText;
+                    if (score[1] === 'cp') {
+                        const centipawns = parseInt(score[2]);
+                        const evaluation = centipawns / 100;
+                        evalText = `Evaluation: ${evaluation > 0 ? '+' : ''}${evaluation.toFixed(2)}`
+                    } else if (score[1] === 'mate') {
+                        const mateIn = parseInt(score[2]);
+                        evalText = `Evaluation: Mate in ${Math.abs(mateIn)}`;
+                    }
+
+                    const sideToMove = game.turn() === 'w' ? 'White' : 'Black';
+
+                    analysisResultDiv.innerHTML = `
+                        <div class="flex flex-col gap-2">
+                            <p><strong>Side to Move:</strong> ${sideToMove}</p>
+                            <p><strong>Best Move:</strong> ${bestMove}</p>
+                            <p><strong>Engine Evaluation:</strong> ${evalText}</p>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        // Function to analyze the current board position using the local Stockfish engine
+        function analyzePosition() {
+            if (!engine) {
+                analysisResultDiv.innerHTML = '<p class="text-red-500">Chess engine not ready. Please wait.</p>';
+                return;
+            }
+
+            if (!game) {
+                analysisResultDiv.innerHTML = '<p class="text-red-500">Please upload a game file first.</p>';
+                return;
+            }
+
+            const fen = game.fen();
+            analysisResultDiv.innerHTML = '<p class="text-blue-500 italic">Analyzing position with Stockfish...</p>';
+
+            // Set the position and start the analysis
+            engine.postMessage('position fen ' + fen);
+            engine.postMessage('go depth 20'); // Analyze to a depth of 20 ply
+        }
+
+        // Function to split PGN string into moves
+        function parsePgnToMoves(pgn) {
+            const moves = [];
+            const regex = /(\d+\.)\s+([^\s]+)\s+([^\s]+)?/g;
+            let match;
+            while ((match = regex.exec(pgn)) !== null) {
+                const moveNumber = match[1];
+                const whiteMove = match[2];
+                const blackMove = match[3];
+                moves.push({ number: moveNumber, white: whiteMove, black: blackMove });
+            }
+            return moves;
+        }
+
+        // Function to render PGN with highlighting
+        function renderPgn() {
+            pgnOutputDiv.innerHTML = ''; // Clear previous content
+            let pgnHtml = '';
+            for (let i = 0; i < pgnMoves.length; i++) {
+                const move = pgnMoves[i];
+                let whiteHtml = move.white;
+                let blackHtml = move.black || '';
+
+                const isCurrentMove = (i * 2 === currentMoveIndex) || (i * 2 + 1 === currentMoveIndex);
+                if (isCurrentMove) {
+                    if (i * 2 === currentMoveIndex) {
+                        whiteHtml = `<b class="text-blue-600">${whiteHtml}</b>`;
+                    } else if (i * 2 + 1 === currentMoveIndex) {
+                        blackHtml = `<b class="text-blue-600">${blackHtml}</b>`;
+                    }
+                }
+
+                pgnHtml += `<span class="whitespace-nowrap">${move.number} ${whiteHtml} ${blackHtml}</span> `;
+            }
+            pgnOutputDiv.innerHTML = pgnHtml;
+        }
+
+        // Main function to initialize the board and game with a PGN string
+        function initializeBoardAndGame(pgnText) {
+            const config = {
+                draggable: false,
+                position: 'start',
+                showNotation: true
+            };
+            board = Chessboard('board', config);
+            game = new Chess();
+
+            // Load the entire game from the PGN text
+            game.load_pgn(pgnText);
+            history = game.history({ verbose: true });
+            pgnMoves = parsePgnToMoves(pgnText);
+
+            game.reset();
+            currentMoveIndex = -1;
+            updateBoardAndPgn();
+
+            // Fix: Apply the theme after the board is initialized
+            changeBoardTheme(boardThemeSelect.value);
+            mainContent.classList.remove('hidden');
+        }
+
+        function updateBoardAndPgn() {
+            board.position(game.fen());
+            renderPgn();
+            // Trigger analysis for the new position after every move
+            analyzePosition();
+        }
+
+        function nextMove() {
+            if (currentMoveIndex < history.length - 1) {
+                game.move(history[currentMoveIndex + 1]);
+                currentMoveIndex++;
+                updateBoardAndPgn();
+            }
+        }
+
+        function previousMove() {
+            if (currentMoveIndex >= 0) {
+                game.undo();
+                currentMoveIndex--;
+                updateBoardAndPgn();
+            }
+        }
+
+        function startOfGame() {
+            game.reset();
+            currentMoveIndex = -1;
+            updateBoardAndPgn();
+        }
+
+        function endOfGame() {
+            startOfGame();
+            for (let move of history) {
+                game.move(move.san);
+            }
+            currentMoveIndex = history.length - 1;
+            updateBoardAndPgn();
+        }
+
+        function changeBoardTheme(theme) {
+            const lightSquares = document.querySelectorAll('.white-1e1d7');
+            const darkSquares = document.querySelectorAll('.black-3c85d');
+
+            lightSquares.forEach(square => {
+                square.classList.remove('original-light', 'green-light', 'blue-light');
+                square.classList.add(`${theme}-light`);
+            });
+            darkSquares.forEach(square => {
+                square.classList.remove('original-dark', 'green-dark', 'blue-dark');
+                square.classList.add(`${theme}-dark`);
+            });
+        }
+
+        // Event listener for file input change, which triggers the file upload
+        fileInput.addEventListener('change', async function() {
+            const file = this.files[0];
+
+            if (!file) {
+                statusMessageDiv.textContent = "Please select a file to upload.";
+                statusMessageDiv.classList.remove('hidden');
+                mainContent.classList.add('hidden');
+                return;
+            }
+
+            // Clear previous state and show loading indicator
+            statusMessageDiv.classList.add('hidden');
+            mainContent.classList.add('hidden');
+            loadingIndicator.classList.remove('hidden');
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                // Perform the fetch call to the ASP.NET Core service
+                const response = await fetch('/api/PgnConverter/convert', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const pgnText = await response.text();
+                    initializeBoardAndGame(pgnText);
+                    // Clear any old analysis results
+                    analysisResultDiv.innerHTML = '<p class="text-gray-500 italic">Analysis will update automatically as you navigate through the game.</p>';
+                } else {
+                    const errorText = await response.text();
+                    statusMessageDiv.textContent = `Error: ${errorText}`;
+                    statusMessageDiv.classList.remove('hidden');
+                }
+            } catch (error) {
+                statusMessageDiv.textContent = `An unexpected error occurred: ${error.message}`;
+                statusMessageDiv.classList.remove('hidden');
+            } finally {
+                loadingIndicator.classList.add('hidden');
+            }
+        });
+
+        // Event listeners for board navigation and theme change
+        document.getElementById('downloadBtn')?.addEventListener('click', function() {
+            const pgnText = pgnOutputDiv.innerText;
+            const blob = new Blob([pgnText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'chess_game.pgn';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 100);
+        });
+
+        document.getElementById('startBtn')?.addEventListener('click', startOfGame);
+        document.getElementById('prevBtn')?.addEventListener('click', previousMove);
+        document.getElementById('nextBtn')?.addEventListener('click', nextMove);
+        document.getElementById('endBtn')?.addEventListener('click', endOfGame);
+
+        // 'Reload PGN' button now re-initializes the game with the current PGN from the editable div
+        document.getElementById('reloadBtn')?.addEventListener('click', () => {
+             const editedPgn = pgnOutputDiv.innerText;
+             // Ensure the PGN is not empty before re-initializings
+             if (editedPgn.trim()) {
+                initializeBoardAndGame(editedPgn);
+                // Clear any old analysis results
+                analysisResultDiv.innerHTML = '<p class="text-gray-500 italic">Analysis will update automatically as you navigate through the game.</p>';
+             } else {
+                 statusMessageDiv.textContent = "PGN text is empty. Please upload a file.";
+                 statusMessageDiv.classList.remove('hidden');
+             }
+        });
+
+        boardThemeSelect?.addEventListener('change', function() {
+            const selectedTheme = this.value;
+            changeBoardTheme(selectedTheme);
+            localStorage.setItem('boardTheme', selectedTheme);
+        });
+
+        // Initialize theme and engine on page load
+        window.onload = function() {
+            const savedTheme = localStorage.getItem('boardTheme');
+            if (savedTheme) {
+                boardThemeSelect.value = savedTheme;
+            }
+            initEngine();
+        };
+
+    </script>
+</body>
+</html>
